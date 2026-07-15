@@ -1,0 +1,18 @@
+{
+    "video": {
+        "codec": "libx264",
+        "crf": 18,
+        "preset": "slow",
+        "profile": "high",
+        "gop": 30,
+        "bf": 2,
+        "color_primaries": "bt709",
+        "color_trc": "bt709",
+        "color_space": "bt709"
+    },
+    "audio": {
+        "codec": "aac",
+        "sample_rate": 48000
+    },
+    "limits": {}
+}
