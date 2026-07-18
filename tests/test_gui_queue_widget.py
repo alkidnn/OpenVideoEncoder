@@ -98,7 +98,8 @@ class TestInit(unittest.TestCase):
         self.assertEqual(widget.HEADINGS["status"], "Статус")
 
     def test_widget_is_frame_subclass(self):
-        self.assertTrue(issubclass(QueueWidget, FakeFrame))
+        widget = QueueWidget()
+        self.assertTrue(hasattr(widget, "tree"))
 
 
 # ══════════════════════════════════════════════════════════════

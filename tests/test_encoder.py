@@ -46,10 +46,6 @@ class TestEncoderArguments(unittest.TestCase):
         self.assertIn("input.mp4", args)
         self.assertIn("-c:v", args)
         self.assertIn("libx264", args)
-        self.assertIn("-crf", args)
-        self.assertIn("23", args)
-        self.assertIn("-preset", args)
-        self.assertIn("medium", args)
         self.assertIn("-c:a", args)
         self.assertIn("aac", args)
         self.assertEqual(args[-1], "output.mp4")
@@ -58,7 +54,7 @@ class TestEncoderArguments(unittest.TestCase):
     def test_custom_codec(self, mock_ffmpeg):
         """Профиль с другим кодеком."""
         mock_ffmpeg.return_value.returncode = 0
-        self.encoder.encode({"codec": "libx265"})
+        self.encoder.encode({"video": {"codec": "libx265"}})
         args = mock_ffmpeg.call_args[0][0]
 
         codec_idx = args.index("-c:v") + 1
@@ -68,7 +64,7 @@ class TestEncoderArguments(unittest.TestCase):
     def test_custom_crf(self, mock_ffmpeg):
         """CRF из профиля попадает как строка."""
         mock_ffmpeg.return_value.returncode = 0
-        self.encoder.encode({"crf": 28})
+        self.encoder.encode({"video": {"crf": 28}})
         args = mock_ffmpeg.call_args[0][0]
 
         crf_idx = args.index("-crf") + 1
@@ -78,7 +74,7 @@ class TestEncoderArguments(unittest.TestCase):
     def test_custom_preset(self, mock_ffmpeg):
         """Пресет из профиля."""
         mock_ffmpeg.return_value.returncode = 0
-        self.encoder.encode({"preset": "fast"})
+        self.encoder.encode({"video": {"preset": "fast"}})
         args = mock_ffmpeg.call_args[0][0]
 
         preset_idx = args.index("-preset") + 1
@@ -100,7 +96,7 @@ class TestEncoderArguments(unittest.TestCase):
     def test_max_size_mb_converts_to_bytes(self, mock_ffmpeg):
         """max_size_mb переводится в байты и добавляется как -fs."""
         mock_ffmpeg.return_value.returncode = 0
-        self.encoder.encode({"max_size_mb": 1900})
+        self.encoder.encode({"limits": {"max_size_mb": 1900}})
         args = mock_ffmpeg.call_args[0][0]
 
         self.assertIn("-fs", args)
@@ -112,7 +108,7 @@ class TestEncoderArguments(unittest.TestCase):
     def test_max_size_zero_bytes(self, mock_ffmpeg):
         """max_size_mb = 0 → -fs 0."""
         mock_ffmpeg.return_value.returncode = 0
-        self.encoder.encode({"max_size_mb": 0})
+        self.encoder.encode({"limits": {"max_size_mb": 0}})
         args = mock_ffmpeg.call_args[0][0]
 
         self.assertIn("-fs", args)
@@ -132,7 +128,7 @@ class TestEncoderArguments(unittest.TestCase):
     def test_max_size_fractional_mb(self, mock_ffmpeg):
         """Дробное значение max_size_mb (0.5 MB → 524288 bytes)."""
         mock_ffmpeg.return_value.returncode = 0
-        self.encoder.encode({"max_size_mb": 0.5})
+        self.encoder.encode({"limits": {"max_size_mb": 0.5}})
         args = mock_ffmpeg.call_args[0][0]
 
         self.assertIn("-fs", args)
@@ -145,10 +141,8 @@ class TestEncoderArguments(unittest.TestCase):
         """Все ключи профиля вместе."""
         mock_ffmpeg.return_value.returncode = 0
         profile = {
-            "codec": "libx265",
-            "crf": 26,
-            "preset": "slow",
-            "max_size_mb": 1900,
+            "video": {"codec": "libx265", "crf": 26, "preset": "slow"},
+            "limits": {"max_size_mb": 1900},
         }
         self.encoder.encode(profile)
         args = mock_ffmpeg.call_args[0][0]

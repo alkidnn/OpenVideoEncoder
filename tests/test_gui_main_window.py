@@ -218,9 +218,9 @@ class TestInit(unittest.TestCase):
         win = MainWindow()
         self.assertIsNone(win._profile_name)
 
-    def test_task_counter_starts_at_zero(self):
+    def test_profiles_dir_default(self):
         win = MainWindow()
-        self.assertEqual(win._task_counter, 0)
+        self.assertEqual(win._profiles_dir, "profiles")
 
     def test_status_bar_created(self):
         win = MainWindow()
@@ -317,13 +317,14 @@ class TestStartEncoding(unittest.TestCase):
         win._start_encoding()
         mock_warn.assert_not_called()
 
-    def test_task_counter_increments(self):
+    def test_task_gets_uuid_id(self):
         win = self._make_ready_window()
-        self.assertEqual(win._task_counter, 0)
+        win.queue_widget.add_task = mock.MagicMock()
         win._start_encoding()
-        self.assertEqual(win._task_counter, 1)
-        win._start_encoding()
-        self.assertEqual(win._task_counter, 2)
+        task = win.queue_widget.add_task.call_args[0][0]
+        self.assertIn("id", task)
+        self.assertIsInstance(task["id"], str)
+        self.assertEqual(len(task["id"]), 36)
 
     def test_task_added_to_queue_widget(self):
         win = self._make_ready_window()
@@ -343,8 +344,11 @@ class TestStartEncoding(unittest.TestCase):
         win._start_encoding()
         task1 = win.queue_widget.add_task.call_args_list[0][0][0]
         task2 = win.queue_widget.add_task.call_args_list[1][0][0]
-        self.assertEqual(task1["id"], 1)
-        self.assertEqual(task2["id"], 2)
+        self.assertIsInstance(task1["id"], str)
+        self.assertIsInstance(task2["id"], str)
+        self.assertNotEqual(task1["id"], task2["id"])
+        self.assertEqual(len(task1["id"]), 36)
+        self.assertEqual(len(task2["id"]), 36)
 
     @mock.patch("gui.main_window.threading.Thread")
     def test_thread_started(self, mock_thread):
@@ -362,7 +366,8 @@ class TestStartEncoding(unittest.TestCase):
         win._start_encoding()
         args = mock_thread.call_args.kwargs["args"]
         task = args[0]
-        self.assertEqual(task["id"], 1)
+        self.assertIsInstance(task["id"], str)
+        self.assertEqual(len(task["id"]), 36)
         self.assertEqual(task["source"], "in.mp4")
         self.assertEqual(task["profile_name"], "test")
 
@@ -425,7 +430,8 @@ class TestEncodeWorker(unittest.TestCase):
         self.win.after = mock.MagicMock()
         self.win._encode_worker(self.task)
 
-        self.win.after.assert_called_once_with(
+        self.assertEqual(self.win.after.call_count, 2)
+        self.win.after.assert_any_call(
             0, self.win._on_encode_complete, 1, "done"
         )
 
@@ -439,7 +445,8 @@ class TestEncodeWorker(unittest.TestCase):
         self.win.after = mock.MagicMock()
         self.win._encode_worker(self.task)
 
-        self.win.after.assert_called_once_with(
+        self.assertEqual(self.win.after.call_count, 2)
+        self.win.after.assert_any_call(
             0, self.win._on_encode_complete, 1, "failed"
         )
 
@@ -452,19 +459,22 @@ class TestOnEncodeComplete(unittest.TestCase):
         self.win.queue_widget.update_status = mock.MagicMock()
 
     def test_update_status_called(self):
-        self.win._on_encode_complete(1, "done")
-        self.win.queue_widget.update_status.assert_called_once_with(1, "done")
+        task_id = "b8086818-52d2-4681-8234-1c9976f97cd7"
+        self.win._on_encode_complete(task_id, "done")
+        self.win.queue_widget.update_status.assert_called_once_with(task_id, "done")
 
     def test_done_updates_status_bar(self):
         self.win._status_bar.config = mock.MagicMock()
-        self.win._on_encode_complete(1, "done")
+        task_id = "b8086818-52d2-4681-8234-1c9976f97cd7"
+        self.win._on_encode_complete(task_id, "done")
         self.win._status_bar.config.assert_called_once()
         text_arg = self.win._status_bar.config.call_args.kwargs.get("text", "")
         self.assertIn("Готово", text_arg)
 
     def test_failed_updates_status_bar(self):
         self.win._status_bar.config = mock.MagicMock()
-        self.win._on_encode_complete(1, "failed")
+        task_id = "b8086818-52d2-4681-8234-1c9976f97cd7"
+        self.win._on_encode_complete(task_id, "failed")
         self.win._status_bar.config.assert_called_once()
         text_arg = self.win._status_bar.config.call_args.kwargs.get("text", "")
         self.assertIn("Ошибка", text_arg)
